@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Produtividade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #0d1117;
+      color: #fff;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 260px 1fr 420px;
+      gap: 16px;
+      width: 100%;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #161b22;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.35);
+      animation: fadeIn 0.6s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+    .title { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+
+    /* Pomodoro */
+    #pomodoro-display { font-size: 42px; text-align: center; margin: 20px 0; }
+    .pomodoro-btns button {
+      width: 100%; padding: 10px; border-radius: 8px; border: none;
+      margin-top: 6px; cursor: pointer; font-weight: 600;
+      background: #238636; color: #fff;
+      transition: 0.2s;
+    }
+    .pomodoro-btns button:hover { background: #2ea043; }
+
+    /* Post-its */
+    #postits-area { display: flex; flex-wrap: wrap; gap: 12px; }
+    .postit {
+      width: 150px; height: 150px; padding: 10px;
+      background: #f1c40f; color: #000;
+      border-radius: 8px; position: relative;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.35);
+    }
+    .postit textarea {
+      width: 100%; height: 100%; border: none; background: transparent;
+      resize: none; outline: none; font-size: 14px;
+    }
+    .delete-postit { position: absolute; top: 6px; right: 8px; cursor: pointer; font-weight: bold; }
+    .add-postit-btn {
+      background: #2f81f7; color: #fff; border: none;
+      padding: 10px 12px; border-radius: 6px; cursor: pointer;
+      margin-bottom: 12px; font-weight: 600;
+    }
+
+    /* Kanban */
+    .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; height: calc(100% - 40px); }
+    .column { background: #1c2128; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; }
+    .column-title { font-weight: 600; margin-bottom: 10px; }
+    .task { background: #21262d; padding: 10px; border-radius: 6px; margin-bottom: 8px; cursor: grab; }
+    .add-task-btn { background: #2f81f7; border: none; padding: 8px; border-radius: 6px; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Pomodoro -->
+    <div class="card" id="pomodoro">
+      <div class="title">Pomodoro</div>
+      <div id="pomodoro-display">25:00</div>
+      <div class="pomodoro-btns">
+        <button onclick="startPomodoro()">Iniciar</button>
+        <button onclick="pausePomodoro()">Pausar</button>
+        <button onclick="resetPomodoro()">Reset</button>
+      </div>
+    </div>
+
+    <!-- Post-its -->
+    <div class="card">
+      <div class="title">Post-its</div>
+      <button class="add-postit-btn" onclick="addPostit()">Adicionar Post-it</button>
+      <div id="postits-area"></div>
+    </div>
+
+    <!-- Kanban -->
+    <div class="card">
+      <div class="title">Kanban</div>
+      <div class="kanban">
+        <div class="column" id="todo">
+          <div class="column-title">A Fazer</div>
+          <button class="add-task-btn" onclick="addTask('todo')">+</button>
+        </div>
+        <div class="column" id="doing">
+          <div class="column-title">Em andamento</div>
+          <button class="add-task-btn" onclick="addTask('doing')">+</button>
+        </div>
+        <div class="column" id="done">
+          <div class="column-title">Concluído</div>
+          <button class="add-task-btn" onclick="addTask('done')">+</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBayxIwqA3R08VHr3LmNXjtP5zXNXtr2iw",
+      authDomain: "dashboard-8d602.firebaseapp.com",
+      projectId: "dashboard-8d602",
+      storageBucket: "dashboard-8d602.firebasestorage.app",
+      messagingSenderId: "653294128032",
+      appId: "1:653294128032:web:ecf3e46ea80cbffc4fb2c5",
+      measurementId: "G-Z2HW4JZT28"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let boardId = new URLSearchParams(window.location.search).get("id");
+    if (!boardId) {
+      boardId = crypto.randomUUID();
+      window.location.search = "?id=" + boardId;
+    }
+
+    const boardRef = doc(db, "boards", boardId);
+
+    async function ensureBoard() {
+      const snap = await getDoc(boardRef);
+      if (!snap.exists()) await setDoc(boardRef, { postits: [], tasks: [], pomodoro: { time: 1500, running: false } });
+    }
+    ensureBoard();
+
+    /* =================== POMODORO =================== */
+    let interval = null;
+    let timeLeft = 1500;
+
+    function updateDisplay() {
+      const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+      const s = (timeLeft % 60).toString().padStart(2, '0');
+      document.getElementById("pomodoro-display").innerText = `${m}:${s}`;
+    }
+
+    function startPomodoro() {
+      if (interval) return;
+      playClick();
+      interval = setInterval(async () => {
+        timeLeft--;
+        updateDisplay();
+        await updateDoc(boardRef, { "pomodoro.time": timeLeft, "pomodoro.running": true });
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          interval = null;
+          playAlarm();
+        }
+      }, 1000);
+    }
+
+    function pausePomodoro() {
+      playClick();
+      clearInterval(interval);
+      interval = null;
+      updateDoc(boardRef, { "pomodoro.running": false });
+    }
+
+    function resetPomodoro() {
+      playClick();
+      clearInterval(interval);
+      interval = null;
+      timeLeft = 1500;
+      updateDisplay();
+      updateDoc(boardRef, { "pomodoro.time": timeLeft, "pomodoro.running": false });
+    }
+
+    /* Sons */
+    function playClick() {
+      new Audio("https://assets.mixkit.co/active_storage/sfx/232/232.wav").play();
+    }
+    function playAlarm() {
+      new Audio("https://assets.mixkit.co/active_storage/sfx/2018/2018.wav").play();
+    }
+
+    /* Sync realtime */
+    onSnapshot(boardRef, (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      timeLeft = data.pomodoro.time;
+      updateDisplay();
+
+      loadPostits(data.postits || []);
+      loadTasks(data.tasks || []);
+    });
+
+    /* ================= POST-ITS ================= */
+    async function addPostit() {
+      const snap = await getDoc(boardRef);
+      const postits = snap.data().postits || [];
+      postits.push({ id: crypto.randomUUID(), text: "" });
+      await updateDoc(boardRef, { postits });
+    }
+
+    function loadPostits(list) {
+      const area = document.getElementById("postits-area");
+      area.innerHTML = "";
+      list.forEach((p) => {
+        const div = document.createElement("div");
+        div.className = "postit";
+        div.innerHTML = `<span class='delete-postit' onclick='deletePostit("${p.id}")'>×</span>
+          <textarea oninput="editPostit('${p.id}', this.value)">${p.text}</textarea>`;
+        area.appendChild(div);
+      });
+    }
+
+    async function editPostit(id, text) {
+      const snap = await getDoc(boardRef);
+      const postits = snap.data().postits.map(p => p.id === id ? { ...p, text } : p);
+      await updateDoc(boardRef, { postits });
+    }
+
+    async function deletePostit(id) {
+      const snap = await getDoc(boardRef);
+      const postits = snap.data().postits.filter(p => p.id !== id);
+      await updateDoc(boardRef, { postits });
+    }
+
+    /* ================= KANBAN ================= */
+    async function addTask(col) {
+      const snap = await getDoc(boardRef);
+      const tasks = snap.data().tasks || [];
+      tasks.push({ id: crypto.randomUUID(), text: "Nova tarefa", column: col });
+      await updateDoc(boardRef, { tasks });
+    }
+
+    function loadTasks(tasks) {
+      ["todo","doing","done"].forEach(col => {
+        const column = document.getElementById(col);
+        column.querySelectorAll('.task').forEach(e => e.remove());
+      });
+
+      tasks.forEach(t => {
+        const el = document.createElement("div");
+        el.className = "task";
+        el.innerText = t.text;
+        el.draggable = true;
+        el.ondragstart = () => dragTask = t.id;
+        document.getElementById(t.column).appendChild(el);
+      });
+    }
+
+    let dragTask = null;
+    document.querySelectorAll('.column').forEach(col => {
+      col.ondragover = (e) => e.preventDefault();
+      col.ondrop = async () => {
+        const snap = await getDoc
