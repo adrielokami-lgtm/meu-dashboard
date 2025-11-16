@@ -1,122 +1,114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Produtividade</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard — Pomodoro • Post-its • Kanban</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      margin: 0;
-      font-family: 'Inter', sans-serif;
-      background: #0d1117;
-      color: #fff;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
+    :root{
+      --bg:#071026; --card:#0b1220; --muted:#9aa6b2; --accent:#5eead4; --accent2:#60a5fa; --danger:#fb7185;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-    .container {
-      display: grid;
-      grid-template-columns: 260px 1fr 420px;
-      gap: 16px;
-      width: 100%;
-      padding: 16px;
-      box-sizing: border-box;
-    }
-    .card {
-      background: #161b22;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.35);
-      animation: fadeIn 0.6s ease;
-    }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
-    .title { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
-
-    /* Pomodoro */
-    #pomodoro-display { font-size: 42px; text-align: center; margin: 20px 0; }
-    .pomodoro-btns button {
-      width: 100%; padding: 10px; border-radius: 8px; border: none;
-      margin-top: 6px; cursor: pointer; font-weight: 600;
-      background: #238636; color: #fff;
-      transition: 0.2s;
-    }
-    .pomodoro-btns button:hover { background: #2ea043; }
-
-    /* Post-its */
-    #postits-area { display: flex; flex-wrap: wrap; gap: 12px; }
-    .postit {
-      width: 150px; height: 150px; padding: 10px;
-      background: #f1c40f; color: #000;
-      border-radius: 8px; position: relative;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.35);
-    }
-    .postit textarea {
-      width: 100%; height: 100%; border: none; background: transparent;
-      resize: none; outline: none; font-size: 14px;
-    }
-    .delete-postit { position: absolute; top: 6px; right: 8px; cursor: pointer; font-weight: bold; }
-    .add-postit-btn {
-      background: #2f81f7; color: #fff; border: none;
-      padding: 10px 12px; border-radius: 6px; cursor: pointer;
-      margin-bottom: 12px; font-weight: 600;
-    }
-
-    /* Kanban */
-    .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; height: calc(100% - 40px); }
-    .column { background: #1c2128; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; }
-    .column-title { font-weight: 600; margin-bottom: 10px; }
-    .task { background: #21262d; padding: 10px; border-radius: 6px; margin-bottom: 8px; cursor: grab; }
-    .add-task-btn { background: #2f81f7; border: none; padding: 8px; border-radius: 6px; color: #fff; cursor: pointer; }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071026 0%, #081124 60%);color:#e6eef6}
+    .container{height:100vh;padding:18px;display:grid;grid-template-columns:240px 1fr 560px;gap:16px;align-items:start}
+    header{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#04232a}
+    h1{font-size:16px;margin:0}
+    .sub{color:var(--muted);font-size:12px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+    .pomodoro{display:flex;flex-direction:column;gap:12px}
+    .timer{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px;border-radius:10px}
+    .time{font-size:40px;font-weight:700}
+    .controls{display:flex;gap:8px}
+    .btn{background:var(--glass);border:none;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--accent2);font-weight:600}
+    .btn.secondary{color:var(--accent)}
+    .postits{display:flex;flex-direction:column;gap:12px}
+    .postit-area{min-height:360px;padding:12px;display:flex;flex-wrap:wrap;gap:12px}
+    .note{width:150px;min-height:100px;padding:10px;border-radius:8px;background:linear-gradient(180deg,#fff8cc,#fff1a8);color:#07212a;box-shadow:4px 6px 18px rgba(2,6,23,0.4);position:relative;overflow:hidden}
+    .note .del{position:absolute;right:6px;top:4px;cursor:pointer;color:#c026d3;font-weight:700}
+    .new-note{display:flex;gap:8px}
+    .kanban{display:flex;gap:12px;height:80vh}
+    .column{flex:1;display:flex;flex-direction:column;gap:8px}
+    .col-header{display:flex;justify-content:space-between;align-items:center}
+    .list{flex:1;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));overflow:auto}
+    .card-item{background:#071428;padding:10px;margin-bottom:8px;border-radius:8px;cursor:grab;border:1px solid rgba(255,255,255,0.02)}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px;align-items:center}
+    .copy{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px;color:var(--muted);cursor:pointer}
+    @media(max-width:1100px){.container{grid-template-columns:1fr;grid-auto-rows:min-content} .kanban{height:60vh}}
+    /* small animations */
+    .pulse{animation:pulse 2s infinite ease-in-out}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
   </style>
 </head>
 <body>
   <div class="container">
-
-    <!-- Pomodoro -->
-    <div class="card" id="pomodoro">
-      <div class="title">Pomodoro</div>
-      <div id="pomodoro-display">25:00</div>
-      <div class="pomodoro-btns">
-        <button onclick="startPomodoro()">Iniciar</button>
-        <button onclick="pausePomodoro()">Pausar</button>
-        <button onclick="resetPomodoro()">Reset</button>
+    <header style="grid-column:1/-1">
+      <div class="brand"><div class="logo">DB</div><div><h1>Dashboard</h1><div class="sub">Pomodoro • Post-its • Kanban — privado (link)</div></div></div>
+      <div class="row">
+        <div class="muted">ID:</div>
+        <div id="boardId" class="sub"></div>
+        <button id="copyLink" class="copy">Copiar link</button>
       </div>
-    </div>
+    </header>
 
-    <!-- Post-its -->
-    <div class="card">
-      <div class="title">Post-its</div>
-      <button class="add-postit-btn" onclick="addPostit()">Adicionar Post-it</button>
-      <div id="postits-area"></div>
-    </div>
-
-    <!-- Kanban -->
-    <div class="card">
-      <div class="title">Kanban</div>
-      <div class="kanban">
-        <div class="column" id="todo">
-          <div class="column-title">A Fazer</div>
-          <button class="add-task-btn" onclick="addTask('todo')">+</button>
+    <!-- Pomodoro column -->
+    <aside class="pomodoro card">
+      <div style="display:flex;justify-content:space-between;align-items:center"><strong>Pomodoro</strong><div class="muted">Tempos: <span id="durLabel">25/5</span></div></div>
+      <div class="timer card" id="timerCard">
+        <div class="time" id="time">25:00</div>
+        <div class="muted" id="phase">Foco</div>
+        <div class="controls">
+          <button id="startBtn" class="btn">Começar</button>
+          <button id="pauseBtn" class="btn secondary">Pausa</button>
+          <button id="resetBtn" class="btn">Reset</button>
         </div>
-        <div class="column" id="doing">
-          <div class="column-title">Em andamento</div>
-          <button class="add-task-btn" onclick="addTask('doing')">+</button>
-        </div>
-        <div class="column" id="done">
-          <div class="column-title">Concluído</div>
-          <button class="add-task-btn" onclick="addTask('done')">+</button>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <label class="muted">Foco</label><input id="focusMin" type="number" value="25" style="width:64px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit">
+          <label class="muted">Descanso</label><input id="breakMin" type="number" value="5" style="width:64px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit">
         </div>
       </div>
-    </div>
+
+      <div class="card muted" style="font-size:13px">
+        Dica: abra pelo link em qualquer navegador. As tarefas e notas são salvas automaticamente.
+      </div>
+    </aside>
+
+    <!-- Post-its column -->
+    <section class="postits card">
+      <div style="display:flex;justify-content:space-between;align-items:center"><strong>Quadro de Post-its</strong><div><button id="addNote" class="btn">Novo post-it</button></div></div>
+      <div class="postit-area" id="notesArea"></div>
+      <div class="muted" style="font-size:12px">Clique em um post-it para editar. Arraste com o mouse para reposicionar (posição salva).</div>
+    </section>
+
+    <!-- Kanban column -->
+    <main class="kanban card">
+      <div class="column">
+        <div class="col-header"><strong>Para fazer</strong><button id="addTodo" class="btn">+ Item</button></div>
+        <div class="list" id="todoList" ondragover="event.preventDefault()"></div>
+      </div>
+      <div class="column">
+        <div class="col-header"><strong>Em andamento</strong></div>
+        <div class="list" id="doingList" ondragover="event.preventDefault()"></div>
+      </div>
+      <div class="column">
+        <div class="col-header"><strong>Concluído</strong></div>
+        <div class="list" id="doneList" ondragover="event.preventDefault()"></div>
+      </div>
+    </main>
 
   </div>
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <!-- Firebase SDK (compat - simples de usar) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+  <script>
+    // ====== SUA CONFIGURAÇÃO FIREBASE (já com as chaves que você passou) ======
     const firebaseConfig = {
       apiKey: "AIzaSyBayxIwqA3R08VHr3LmNXjtP5zXNXtr2iw",
       authDomain: "dashboard-8d602.firebaseapp.com",
@@ -126,143 +118,157 @@
       appId: "1:653294128032:web:ecf3e46ea80cbffc4fb2c5",
       measurementId: "G-Z2HW4JZT28"
     };
+    // =====================================================================
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // Board ID (url ?id= or last local or random)
+    const urlParams = new URLSearchParams(location.search);
+    let boardId = urlParams.get('id') || localStorage.getItem('lastBoardId') || (function(){ const chars='abcdefghijklmnopqrstuvwxyz0123456789'; let s=''; for(let i=0;i<10;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; })();
+    if(!urlParams.get('id')) history.replaceState(null,'',location.pathname+'?id='+boardId);
+    localStorage.setItem('lastBoardId', boardId);
+    document.getElementById('boardId').textContent = boardId;
 
-    let boardId = new URLSearchParams(window.location.search).get("id");
-    if (!boardId) {
-      boardId = crypto.randomUUID();
-      window.location.search = "?id=" + boardId;
+    document.getElementById('copyLink').addEventListener('click',()=>{ const link = location.origin+location.pathname+"?id="+boardId; navigator.clipboard.writeText(link).then(()=>alert('Link copiado para a área de transferência')) })
+
+    const docRef = db.collection('boards').doc(boardId);
+
+    const defaultData = {
+      pomodoro:{phase:'focus',remaining:1500,focusMin:25,breakMin:5,playing:false},
+      notes:[],
+      kanban:{todo:[],doing:[],done:[]},
+      updated: firebase.firestore.FieldValue.serverTimestamp()
     }
 
-    const boardRef = doc(db, "boards", boardId);
-
-    async function ensureBoard() {
-      const snap = await getDoc(boardRef);
-      if (!snap.exists()) await setDoc(boardRef, { postits: [], tasks: [], pomodoro: { time: 1500, running: false } });
+    let localData = null;
+    async function init(){
+      const snap = await docRef.get();
+      if(!snap.exists){ await docRef.set(defaultData); localData = defaultData }
+      docRef.onSnapshot(snap=>{
+        if(!snap.exists) return;
+        localData = snap.data();
+        localData.pomodoro = localData.pomodoro || defaultData.pomodoro;
+        localData.notes = localData.notes || [];
+        localData.kanban = localData.kanban || defaultData.kanban;
+        renderAll();
+      })
     }
-    ensureBoard();
+    init().catch(e=>console.error(e));
 
-    /* =================== POMODORO =================== */
-    let interval = null;
-    let timeLeft = 1500;
+    // ---------- POMODORO ----------
+    const timeEl = document.getElementById('time');
+    const phaseEl = document.getElementById('phase');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const focusMinIn = document.getElementById('focusMin');
+    const breakMinIn = document.getElementById('breakMin');
+    const durLabel = document.getElementById('durLabel');
 
-    function updateDisplay() {
-      const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-      const s = (timeLeft % 60).toString().padStart(2, '0');
-      document.getElementById("pomodoro-display").innerText = `${m}:${s}`;
+    let timerInterval = null;
+
+    function secToDisplay(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const ss=(s%60).toString().padStart(2,'0'); return `${m}:${ss}` }
+
+    function renderPomodoro(){
+      const p = localData.pomodoro;
+      timeEl.textContent = secToDisplay(p.remaining);
+      phaseEl.textContent = p.phase==='focus'?'Foco':'Descanso';
+      focusMinIn.value = p.focusMin;
+      breakMinIn.value = p.breakMin;
+      durLabel.textContent = `${p.focusMin}/${p.breakMin}`;
+      if(p.playing && !timerInterval) startTick();
+      if(!p.playing && timerInterval){ clearInterval(timerInterval); timerInterval=null }
     }
 
-    function startPomodoro() {
-      if (interval) return;
-      playClick();
-      interval = setInterval(async () => {
-        timeLeft--;
-        updateDisplay();
-        await updateDoc(boardRef, { "pomodoro.time": timeLeft, "pomodoro.running": true });
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          interval = null;
-          playAlarm();
+    function startTick(){ if(timerInterval) return; timerInterval = setInterval(async ()=>{
+        if(!localData) return;
+        localData.pomodoro.remaining -=1;
+        if(localData.pomodoro.remaining<=0){
+          if(localData.pomodoro.phase==='focus'){
+            localData.pomodoro.phase='break';
+            localData.pomodoro.remaining = localData.pomodoro.breakMin*60;
+            playAlarm();
+          } else {
+            localData.pomodoro.phase='focus';
+            localData.pomodoro.remaining = localData.pomodoro.focusMin*60;
+            playAlarm();
+          }
         }
-      }, 1000);
+        timeEl.textContent = secToDisplay(localData.pomodoro.remaining);
+        try{ await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) }catch(e){console.error(e)}
+      },1000) }
+
+    startBtn.addEventListener('click',async ()=>{ localData.pomodoro.playing = true; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+    pauseBtn.addEventListener('click',async ()=>{ localData.pomodoro.playing = false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+    resetBtn.addEventListener('click',async ()=>{ localData.pomodoro.phase='focus'; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; localData.pomodoro.playing=false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+
+    focusMinIn.addEventListener('change',async ()=>{ localData.pomodoro.focusMin = parseInt(focusMinIn.value)||25; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+    breakMinIn.addEventListener('change',async ()=>{ localData.pomodoro.breakMin = parseInt(breakMinIn.value)||5; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+
+    // ---------- NOTES (post-its) ----------
+    const notesArea = document.getElementById('notesArea');
+    document.getElementById('addNote').addEventListener('click',()=>{
+      const note = { id: (function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(), text: 'Nova nota', x:0,y:0,w:150,h:120,color:'#fff8cc' }
+      localData.notes.push(note);
+      docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()})
+    })
+
+    function renderNotes(){
+      notesArea.innerHTML='';
+      (localData.notes||[]).forEach(n=>{
+        const el = document.createElement('div'); el.className='note'; el.draggable=true; el.style.width = (n.w||150)+'px'; el.style.minHeight=(n.h||100)+'px'; el.style.background = n.color||'#fff8cc';
+        el.dataset.id = n.id;
+        el.innerHTML = `<div class=del title=Remover>✕</div><div contenteditable class=text>${escapeHtml(n.text)}</div>`;
+        el.querySelector('.del').addEventListener('click',async ()=>{ localData.notes = localData.notes.filter(x=>x.id!==n.id); await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) })
+        const txt = el.querySelector('.text'); txt.addEventListener('input',debounce(async ()=>{ const noteObj = localData.notes.find(x=>x.id===n.id); if(noteObj){ noteObj.text = txt.innerText; await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) } },600))
+        el.addEventListener('dragstart',ev=>{ ev.dataTransfer.setData('text/plain', n.id) })
+        notesArea.appendChild(el)
+      })
     }
 
-    function pausePomodoro() {
-      playClick();
-      clearInterval(interval);
-      interval = null;
-      updateDoc(boardRef, { "pomodoro.running": false });
+    // ---------- KANBAN ----------
+    const todoList = document.getElementById('todoList');
+    const doingList = document.getElementById('doingList');
+    const doneList = document.getElementById('doneList');
+
+    document.getElementById('addTodo').addEventListener('click',async ()=>{
+      const text = prompt('Texto da tarefa:'); if(!text) return;
+      localData.kanban.todo.push({id:(function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(),text}); await docRef.update({'kanban': localData.kanban, updated: firebase.firestore.FieldValue.serverTimestamp()})
+    })
+
+    function makeCard(item){ const el = document.createElement('div'); el.className='card-item'; el.draggable=true; el.dataset.id=item.id; el.textContent = item.text; el.addEventListener('dragstart',ev=>ev.dataTransfer.setData('text/plain',item.id)); return el }
+
+    function renderKanban(){
+      todoList.innerHTML=''; doingList.innerHTML=''; doneList.innerHTML='';
+      (localData.kanban.todo||[]).forEach(i=>todoList.appendChild(makeCard(i)));
+      (localData.kanban.doing||[]).forEach(i=>doingList.appendChild(makeCard(i)));
+      (localData.kanban.done||[]).forEach(i=>doneList.appendChild(makeCard(i)));
+
+      [todoList,doingList,doneList].forEach(list=>{
+        list.ondrop = async ev=>{
+          ev.preventDefault(); const id = ev.dataTransfer.getData('text/plain'); if(!id) return;
+          ['todo','doing','done'].forEach(k=>{ localData.kanban[k]=localData.kanban[k].filter(x=>x.id!==id) });
+          const draggedEl = document.querySelector('[data-id="'+id+'"]');
+          const draggedText = (draggedEl && draggedEl.textContent) || 'Tarefa';
+          const targetKey = list.id.replace('List','').toLowerCase();
+          localData.kanban[targetKey].push({id:id,text:draggedText});
+          await docRef.update({'kanban': localData.kanban, updated: firebase.firestore.FieldValue.serverTimestamp()})
+        }
+      })
     }
 
-    function resetPomodoro() {
-      playClick();
-      clearInterval(interval);
-      interval = null;
-      timeLeft = 1500;
-      updateDisplay();
-      updateDoc(boardRef, { "pomodoro.time": timeLeft, "pomodoro.running": false });
-    }
+    function renderAll(){ if(!localData) return; renderPomodoro(); renderNotes(); renderKanban(); }
 
-    /* Sons */
-    function playClick() {
-      new Audio("https://assets.mixkit.co/active_storage/sfx/232/232.wav").play();
-    }
-    function playAlarm() {
-      new Audio("https://assets.mixkit.co/active_storage/sfx/2018/2018.wav").play();
-    }
+    function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
+    function debounce(fn,wait){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait) } }
 
-    /* Sync realtime */
-    onSnapshot(boardRef, (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
+    setInterval(()=>{ if(localData) renderAll() },800);
+    window.addEventListener('beforeunload',()=>{ try{ docRef.update({updated: firebase.firestore.FieldValue.serverTimestamp()}) }catch(e){} })
 
-      timeLeft = data.pomodoro.time;
-      updateDisplay();
+    // sounds
+    function playClick(){ try{ new Audio("https://assets.mixkit.co/active_storage/sfx/232/232.wav").play() }catch(e){} }
+    function playAlarm(){ try{ new Audio("https://assets.mixkit.co/active_storage/sfx/2018/2018.wav").play() }catch(e){} }
 
-      loadPostits(data.postits || []);
-      loadTasks(data.tasks || []);
-    });
-
-    /* ================= POST-ITS ================= */
-    async function addPostit() {
-      const snap = await getDoc(boardRef);
-      const postits = snap.data().postits || [];
-      postits.push({ id: crypto.randomUUID(), text: "" });
-      await updateDoc(boardRef, { postits });
-    }
-
-    function loadPostits(list) {
-      const area = document.getElementById("postits-area");
-      area.innerHTML = "";
-      list.forEach((p) => {
-        const div = document.createElement("div");
-        div.className = "postit";
-        div.innerHTML = `<span class='delete-postit' onclick='deletePostit("${p.id}")'>×</span>
-          <textarea oninput="editPostit('${p.id}', this.value)">${p.text}</textarea>`;
-        area.appendChild(div);
-      });
-    }
-
-    async function editPostit(id, text) {
-      const snap = await getDoc(boardRef);
-      const postits = snap.data().postits.map(p => p.id === id ? { ...p, text } : p);
-      await updateDoc(boardRef, { postits });
-    }
-
-    async function deletePostit(id) {
-      const snap = await getDoc(boardRef);
-      const postits = snap.data().postits.filter(p => p.id !== id);
-      await updateDoc(boardRef, { postits });
-    }
-
-    /* ================= KANBAN ================= */
-    async function addTask(col) {
-      const snap = await getDoc(boardRef);
-      const tasks = snap.data().tasks || [];
-      tasks.push({ id: crypto.randomUUID(), text: "Nova tarefa", column: col });
-      await updateDoc(boardRef, { tasks });
-    }
-
-    function loadTasks(tasks) {
-      ["todo","doing","done"].forEach(col => {
-        const column = document.getElementById(col);
-        column.querySelectorAll('.task').forEach(e => e.remove());
-      });
-
-      tasks.forEach(t => {
-        const el = document.createElement("div");
-        el.className = "task";
-        el.innerText = t.text;
-        el.draggable = true;
-        el.ondragstart = () => dragTask = t.id;
-        document.getElementById(t.column).appendChild(el);
-      });
-    }
-
-    let dragTask = null;
-    document.querySelectorAll('.column').forEach(col => {
-      col.ondragover = (e) => e.preventDefault();
-      col.ondrop = async () => {
-        const snap = await getDoc
+  </script>
+</body>
+</html>
