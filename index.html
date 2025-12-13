@@ -50,10 +50,9 @@
     <header style="grid-column:1/-1">
       <div class="brand"><div class="logo">DB</div><div><h1>Dashboard</h1><div class="sub">Pomodoro • Post-its • Kanban — privado (link)</div></div></div>
       <div class="row">
-        <div class="muted">ID:</div>
-        <div id="boardId" class="sub"></div>
-        <button id="copyLink" class="copy">Copiar link</button>
-      </div>
+  <button id="loginBtn" class="btn">Login Google</button>
+  <button id="logoutBtn" class="btn secondary" style="display:none">Sair</button>
+</div>
     </header>
 
     <!-- Pomodoro column -->
@@ -82,7 +81,7 @@
     <section class="postits card">
       <div style="display:flex;justify-content:space-between;align-items:center"><strong>Quadro de Post-its</strong><div><button id="addNote" class="btn">Novo post-it</button></div></div>
       <div class="postit-area" id="notesArea"></div>
-      <div class="muted" style="font-size:12px">Clique em um post-it para editar. Arraste com o mouse para reposicionar (posição salva).</div>
+      <div class="muted" style="font-size:12px">Clique em um post-it para editar.</div>
     </section>
 
     <!-- Kanban column -->
@@ -106,6 +105,7 @@
   <!-- Firebase SDK (compat - simples de usar) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
   <script>
     // ====== SUA CONFIGURAÇÃO FIREBASE (já com as chaves que você passou) ======
@@ -121,39 +121,91 @@
     // =====================================================================
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
     // Board ID (url ?id= or last local or random)
     const urlParams = new URLSearchParams(location.search);
     let boardId = urlParams.get('id') || localStorage.getItem('lastBoardId') || (function(){ const chars='abcdefghijklmnopqrstuvwxyz0123456789'; let s=''; for(let i=0;i<10;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; })();
     if(!urlParams.get('id')) history.replaceState(null,'',location.pathname+'?id='+boardId);
     localStorage.setItem('lastBoardId', boardId);
-    document.getElementById('boardId').textContent = boardId;
+    
 
-    document.getElementById('copyLink').addEventListener('click',()=>{ const link = location.origin+location.pathname+"?id="+boardId; navigator.clipboard.writeText(link).then(()=>alert('Link copiado para a área de transferência')) })
+  let docRef = null;
+let currentUser = null;
 
-    const docRef = db.collection('boards').doc(boardId);
-
-    const defaultData = {
-      pomodoro:{phase:'focus',remaining:1500,focusMin:25,breakMin:5,playing:false},
-      notes:[],
-      kanban:{todo:[],doing:[],done:[]},
-      updated: firebase.firestore.FieldValue.serverTimestamp()
-    }
+   const defaultData = {
+  pomodoro:{
+    phase:'focus',
+    remaining:1500,
+    focusMin:25,
+    breakMin:5,
+    playing:false,
+    tickOwner:null
+  },
+  notes:[],
+  kanban:{todo:[],doing:[],done:[]},
+  updated: firebase.firestore.FieldValue.serverTimestamp()
+}
 
     let localData = null;
-    async function init(){
-      const snap = await docRef.get();
-      if(!snap.exists){ await docRef.set(defaultData); localData = defaultData }
-      docRef.onSnapshot(snap=>{
-        if(!snap.exists) return;
-        localData = snap.data();
-        localData.pomodoro = localData.pomodoro || defaultData.pomodoro;
-        localData.notes = localData.notes || [];
-        localData.kanban = localData.kanban || defaultData.kanban;
-        renderAll();
-      })
+    const TAB_ID = Math.random().toString(36).slice(2);
+    
+    function setUIEnabled(enabled) {
+  document.querySelectorAll('button').forEach(b => {
+    if (b.id !== 'loginBtn' && b.id !== 'logoutBtn') {
+      b.disabled = !enabled;
+      b.style.opacity = enabled ? 1 : 0.5;
+      b.style.pointerEvents = enabled ? 'auto' : 'none';
     }
-    init().catch(e=>console.error(e));
+  });
+}
+    function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
+
+    const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+    auth.onAuthStateChanged(async user=>{
+      loginBtn.style.display = user ? 'none' : 'inline-block';
+  logoutBtn.style.display = user ? 'inline-block' : 'none';
+  
+  if(!user){
+    currentUser = null;
+    docRef = null;
+    localData = null;
+    setUIEnabled(false);
+    return;
+  }
+
+  currentUser = user;
+
+  const userRef = db.collection('users').doc(user.uid);
+  docRef = userRef.collection('boards').doc(boardId);
+
+  setUIEnabled(true);
+  await init();
+});
+    async function init(){
+  const snap = await docRef.get();
+
+  if(!snap.exists){
+    await docRef.set(defaultData);
+  }
+
+  docRef.onSnapshot(snap=>{
+    if(!snap.exists) return;
+
+    localData = snap.data();
+    localData.pomodoro = localData.pomodoro || structuredClone(defaultData.pomodoro);
+    localData.notes = localData.notes || [];
+    localData.kanban = localData.kanban || structuredClone(defaultData.kanban);
+
+    renderAll();
+  });
+}
 
     // ---------- POMODORO ----------
     const timeEl = document.getElementById('time');
@@ -176,38 +228,108 @@
       focusMinIn.value = p.focusMin;
       breakMinIn.value = p.breakMin;
       durLabel.textContent = `${p.focusMin}/${p.breakMin}`;
-      if(p.playing && !timerInterval) startTick();
+      if(p.playing) startTick();
       if(!p.playing && timerInterval){ clearInterval(timerInterval); timerInterval=null }
     }
 
-    function startTick(){ if(timerInterval) return; timerInterval = setInterval(async ()=>{
-        if(!localData) return;
-        localData.pomodoro.remaining -=1;
-        if(localData.pomodoro.remaining<=0){
-          if(localData.pomodoro.phase==='focus'){
-            localData.pomodoro.phase='break';
-            localData.pomodoro.remaining = localData.pomodoro.breakMin*60;
-            playAlarm();
-          } else {
-            localData.pomodoro.phase='focus';
-            localData.pomodoro.remaining = localData.pomodoro.focusMin*60;
-            playAlarm();
-          }
-        }
-        timeEl.textContent = secToDisplay(localData.pomodoro.remaining);
-        try{ await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) }catch(e){console.error(e)}
-      },1000) }
+    function startTick(){
+  if(timerInterval){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 
-    startBtn.addEventListener('click',async ()=>{ localData.pomodoro.playing = true; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
-    pauseBtn.addEventListener('click',async ()=>{ localData.pomodoro.playing = false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
-    resetBtn.addEventListener('click',async ()=>{ localData.pomodoro.phase='focus'; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; localData.pomodoro.playing=false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+  timerInterval = setInterval(async ()=>{
+    if(!localData) return;
 
-    focusMinIn.addEventListener('change',async ()=>{ localData.pomodoro.focusMin = parseInt(focusMinIn.value)||25; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
-    breakMinIn.addEventListener('change',async ()=>{ localData.pomodoro.breakMin = parseInt(breakMinIn.value)||5; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+    // só quem tem o lock pode contar
+    if(localData.pomodoro.tickOwner !== TAB_ID) return;
+
+    localData.pomodoro.remaining -= 1;
+
+    if(localData.pomodoro.remaining <= 0){
+      if(localData.pomodoro.phase === 'focus'){
+        localData.pomodoro.phase = 'break';
+        localData.pomodoro.remaining = localData.pomodoro.breakMin * 60;
+      } else {
+        localData.pomodoro.phase = 'focus';
+        localData.pomodoro.remaining = localData.pomodoro.focusMin * 60;
+      }
+      playAlarm();
+    }
+
+    await docRef.update({
+      pomodoro: localData.pomodoro,
+      updated: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+  }, 1000);
+}
+
+   startBtn.addEventListener('click',async ()=>{
+  function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}   
+  localData.pomodoro.playing = true;
+  localData.pomodoro.tickOwner = TAB_ID;
+
+  await docRef.update({
+    pomodoro: localData.pomodoro,
+    updated: firebase.firestore.FieldValue.serverTimestamp()
+  });
+});
+    pauseBtn.addEventListener('click',async ()=>{
+   function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}   
+  localData.pomodoro.playing = false;
+  localData.pomodoro.tickOwner = null;
+
+  await docRef.update({
+    pomodoro: localData.pomodoro,
+    updated: firebase.firestore.FieldValue.serverTimestamp()
+  });
+});
+    resetBtn.addEventListener('click',async ()=>{ 
+      function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+} 
+      localData.pomodoro.phase='focus'; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; localData.pomodoro.playing=false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+
+    focusMinIn.addEventListener('change',async ()=>{ 
+      function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
+      localData.pomodoro.focusMin = parseInt(focusMinIn.value)||25; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
+    breakMinIn.addEventListener('change',async ()=>{ 
+      function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
+      localData.pomodoro.breakMin = parseInt(breakMinIn.value)||5; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
 
     // ---------- NOTES (post-its) ----------
     const notesArea = document.getElementById('notesArea');
     document.getElementById('addNote').addEventListener('click',()=>{
+      function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
       const note = { id: (function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(), text: 'Nova nota', x:0,y:0,w:150,h:120,color:'#fff8cc' }
       localData.notes.push(note);
       docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()})
@@ -219,8 +341,22 @@
         const el = document.createElement('div'); el.className='note'; el.draggable=true; el.style.width = (n.w||150)+'px'; el.style.minHeight=(n.h||100)+'px'; el.style.background = n.color||'#fff8cc';
         el.dataset.id = n.id;
         el.innerHTML = `<div class=del title=Remover>✕</div><div contenteditable class=text>${escapeHtml(n.text)}</div>`;
-        el.querySelector('.del').addEventListener('click',async ()=>{ localData.notes = localData.notes.filter(x=>x.id!==n.id); await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) })
-        const txt = el.querySelector('.text'); txt.addEventListener('input',debounce(async ()=>{ const noteObj = localData.notes.find(x=>x.id===n.id); if(noteObj){ noteObj.text = txt.innerText; await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) } },600))
+        el.querySelector('.del').addEventListener('click',async ()=>{ 
+          function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
+          localData.notes = localData.notes.filter(x=>x.id!==n.id); await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) })
+        const txt = el.querySelector('.text'); txt.addEventListener('input',debounce(async ()=>{ 
+          function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
+          const noteObj = localData.notes.find(x=>x.id===n.id); if(noteObj){ noteObj.text = txt.innerText; await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) } },600))
         el.addEventListener('dragstart',ev=>{ ev.dataTransfer.setData('text/plain', n.id) })
         notesArea.appendChild(el)
       })
@@ -232,7 +368,13 @@
     const doneList = document.getElementById('doneList');
 
     document.getElementById('addTodo').addEventListener('click',async ()=>{
-      const text = prompt('Texto da tarefa:'); if(!text) return;
+function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
+       const text = prompt('Texto da tarefa:'); if(!text) return;
       localData.kanban.todo.push({id:(function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(),text}); await docRef.update({'kanban': localData.kanban, updated: firebase.firestore.FieldValue.serverTimestamp()})
     })
 
@@ -246,6 +388,12 @@
 
       [todoList,doingList,doneList].forEach(list=>{
         list.ondrop = async ev=>{
+          function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
           ev.preventDefault(); const id = ev.dataTransfer.getData('text/plain'); if(!id) return;
           ['todo','doing','done'].forEach(k=>{ localData.kanban[k]=localData.kanban[k].filter(x=>x.id!==id) });
           const draggedEl = document.querySelector('[data-id="'+id+'"]');
@@ -262,7 +410,6 @@
     function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
     function debounce(fn,wait){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait) } }
 
-    setInterval(()=>{ if(localData) renderAll() },800);
     window.addEventListener('beforeunload',()=>{ try{ docRef.update({updated: firebase.firestore.FieldValue.serverTimestamp()}) }catch(e){} })
 
     // sounds
