@@ -132,7 +132,12 @@
 
   let docRef = null;
 let currentUser = null;
-
+    function requireLogin(){
+  if(!currentUser || !docRef || !localData){
+    alert("Faça login com Google para usar o dashboard.");
+    throw new Error("Usuário não autenticado");
+  }
+}
    const defaultData = {
   pomodoro:{
     phase:'focus',
@@ -160,9 +165,6 @@ let currentUser = null;
   });
 }
     function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
 
@@ -267,9 +269,6 @@ const logoutBtn = document.getElementById('logoutBtn');
 
    startBtn.addEventListener('click',async ()=>{
   function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }   
   localData.pomodoro.playing = true;
@@ -282,9 +281,6 @@ const logoutBtn = document.getElementById('logoutBtn');
 });
     pauseBtn.addEventListener('click',async ()=>{
    function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }   
   localData.pomodoro.playing = false;
@@ -297,26 +293,17 @@ const logoutBtn = document.getElementById('logoutBtn');
 });
     resetBtn.addEventListener('click',async ()=>{ 
       function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 } 
       localData.pomodoro.phase='focus'; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; localData.pomodoro.playing=false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
 
     focusMinIn.addEventListener('change',async ()=>{ 
       function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
       localData.pomodoro.focusMin = parseInt(focusMinIn.value)||25; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
     breakMinIn.addEventListener('change',async ()=>{ 
       function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
       localData.pomodoro.breakMin = parseInt(breakMinIn.value)||5; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
@@ -325,9 +312,6 @@ const logoutBtn = document.getElementById('logoutBtn');
     const notesArea = document.getElementById('notesArea');
     document.getElementById('addNote').addEventListener('click',()=>{
       function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
       const note = { id: (function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(), text: 'Nova nota', x:0,y:0,w:150,h:120,color:'#fff8cc' }
@@ -343,17 +327,11 @@ const logoutBtn = document.getElementById('logoutBtn');
         el.innerHTML = `<div class=del title=Remover>✕</div><div contenteditable class=text>${escapeHtml(n.text)}</div>`;
         el.querySelector('.del').addEventListener('click',async ()=>{ 
           function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
           localData.notes = localData.notes.filter(x=>x.id!==n.id); await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) })
         const txt = el.querySelector('.text'); txt.addEventListener('input',debounce(async ()=>{ 
           function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
           const noteObj = localData.notes.find(x=>x.id===n.id); if(noteObj){ noteObj.text = txt.innerText; await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) } },600))
@@ -369,9 +347,6 @@ const logoutBtn = document.getElementById('logoutBtn');
 
     document.getElementById('addTodo').addEventListener('click',async ()=>{
 function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
        const text = prompt('Texto da tarefa:'); if(!text) return;
@@ -389,9 +364,6 @@ function requireLogin(){
       [todoList,doingList,doneList].forEach(list=>{
         list.ondrop = async ev=>{
           function requireLogin(){
-  if(!currentUser || !docRef || !localData){
-    alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
   }
 }
           ev.preventDefault(); const id = ev.dataTransfer.getData('text/plain'); if(!id) return;
