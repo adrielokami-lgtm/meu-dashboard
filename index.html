@@ -135,8 +135,9 @@ let currentUser = null;
     function requireLogin(){
   if(!currentUser || !docRef || !localData){
     alert("Faça login com Google para usar o dashboard.");
-    throw new Error("Usuário não autenticado");
+    return false;
   }
+  return true;
 }
    const defaultData = {
   pomodoro:{
@@ -164,12 +165,17 @@ let currentUser = null;
     }
   });
 }
-    function requireLogin(){
-  }
-}
 
     const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+    loginBtn.addEventListener('click', async () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  await auth.signInWithPopup(provider);
+});
+
+logoutBtn.addEventListener('click', async () => {
+  await auth.signOut();
+});
     auth.onAuthStateChanged(async user=>{
       loginBtn.style.display = user ? 'none' : 'inline-block';
   logoutBtn.style.display = user ? 'inline-block' : 'none';
@@ -230,7 +236,7 @@ const logoutBtn = document.getElementById('logoutBtn');
       focusMinIn.value = p.focusMin;
       breakMinIn.value = p.breakMin;
       durLabel.textContent = `${p.focusMin}/${p.breakMin}`;
-      if(p.playing) startTick();
+      if(p.playing && !timerInterval) startTick();
       if(!p.playing && timerInterval){ clearInterval(timerInterval); timerInterval=null }
     }
 
@@ -244,7 +250,18 @@ const logoutBtn = document.getElementById('logoutBtn');
     if(!localData) return;
 
     // só quem tem o lock pode contar
-    if(localData.pomodoro.tickOwner !== TAB_ID) return;
+    const lastUpdate = localData.updated?.toDate?.()?.getTime() || 0;
+const now = Date.now();
+
+// se passou mais de 5s sem update, assume o controle
+if (
+  localData.pomodoro.tickOwner &&
+  localData.pomodoro.tickOwner !== TAB_ID &&
+  now - lastUpdate < 5000
+) return;
+
+// assume posse se estava abandonado
+localData.pomodoro.tickOwner = TAB_ID;
 
     localData.pomodoro.remaining -= 1;
 
@@ -268,9 +285,7 @@ const logoutBtn = document.getElementById('logoutBtn');
 }
 
    startBtn.addEventListener('click',async ()=>{
-  function requireLogin(){
-  }
-}   
+   if(!requireLogin()) return;  
   localData.pomodoro.playing = true;
   localData.pomodoro.tickOwner = TAB_ID;
 
@@ -280,9 +295,7 @@ const logoutBtn = document.getElementById('logoutBtn');
   });
 });
     pauseBtn.addEventListener('click',async ()=>{
-   function requireLogin(){
-  }
-}   
+   if(!requireLogin()) return;  
   localData.pomodoro.playing = false;
   localData.pomodoro.tickOwner = null;
 
@@ -292,28 +305,20 @@ const logoutBtn = document.getElementById('logoutBtn');
   });
 });
     resetBtn.addEventListener('click',async ()=>{ 
-      function requireLogin(){
-  }
-} 
+      if(!requireLogin()) return; 
       localData.pomodoro.phase='focus'; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; localData.pomodoro.playing=false; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
 
     focusMinIn.addEventListener('change',async ()=>{ 
-      function requireLogin(){
-  }
-}
+      if(!requireLogin()) return;
       localData.pomodoro.focusMin = parseInt(focusMinIn.value)||25; localData.pomodoro.remaining = localData.pomodoro.focusMin*60; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
     breakMinIn.addEventListener('change',async ()=>{ 
-      function requireLogin(){
-  }
-}
+      if(!requireLogin()) return;
       localData.pomodoro.breakMin = parseInt(breakMinIn.value)||5; await docRef.update({ 'pomodoro': localData.pomodoro, updated: firebase.firestore.FieldValue.serverTimestamp() }) })
 
     // ---------- NOTES (post-its) ----------
     const notesArea = document.getElementById('notesArea');
     document.getElementById('addNote').addEventListener('click',()=>{
-      function requireLogin(){
-  }
-}
+      if(!requireLogin()) return;
       const note = { id: (function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(), text: 'Nova nota', x:0,y:0,w:150,h:120,color:'#fff8cc' }
       localData.notes.push(note);
       docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()})
@@ -326,14 +331,10 @@ const logoutBtn = document.getElementById('logoutBtn');
         el.dataset.id = n.id;
         el.innerHTML = `<div class=del title=Remover>✕</div><div contenteditable class=text>${escapeHtml(n.text)}</div>`;
         el.querySelector('.del').addEventListener('click',async ()=>{ 
-          function requireLogin(){
-  }
-}
+          if(!requireLogin()) return;
           localData.notes = localData.notes.filter(x=>x.id!==n.id); await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) })
         const txt = el.querySelector('.text'); txt.addEventListener('input',debounce(async ()=>{ 
-          function requireLogin(){
-  }
-}
+          if(!requireLogin()) return;
           const noteObj = localData.notes.find(x=>x.id===n.id); if(noteObj){ noteObj.text = txt.innerText; await docRef.update({'notes': localData.notes, updated: firebase.firestore.FieldValue.serverTimestamp()}) } },600))
         el.addEventListener('dragstart',ev=>{ ev.dataTransfer.setData('text/plain', n.id) })
         notesArea.appendChild(el)
@@ -346,9 +347,7 @@ const logoutBtn = document.getElementById('logoutBtn');
     const doneList = document.getElementById('doneList');
 
     document.getElementById('addTodo').addEventListener('click',async ()=>{
-function requireLogin(){
-  }
-}
+if(!requireLogin()) return;
        const text = prompt('Texto da tarefa:'); if(!text) return;
       localData.kanban.todo.push({id:(function(){ let s=''; const c='abcdefghijklmnopqrstuvwxyz0123456789'; for(let i=0;i<10;i++) s+=c[Math.floor(Math.random()*c.length)]; return s })(),text}); await docRef.update({'kanban': localData.kanban, updated: firebase.firestore.FieldValue.serverTimestamp()})
     })
@@ -363,9 +362,7 @@ function requireLogin(){
 
       [todoList,doingList,doneList].forEach(list=>{
         list.ondrop = async ev=>{
-          function requireLogin(){
-  }
-}
+          if(!requireLogin()) return;
           ev.preventDefault(); const id = ev.dataTransfer.getData('text/plain'); if(!id) return;
           ['todo','doing','done'].forEach(k=>{ localData.kanban[k]=localData.kanban[k].filter(x=>x.id!==id) });
           const draggedEl = document.querySelector('[data-id="'+id+'"]');
@@ -382,8 +379,15 @@ function requireLogin(){
     function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
     function debounce(fn,wait){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait) } }
 
-    window.addEventListener('beforeunload',()=>{ try{ docRef.update({updated: firebase.firestore.FieldValue.serverTimestamp()}) }catch(e){} })
-
+    window.addEventListener('beforeunload',()=>{
+  if(docRef){
+    try{
+      docRef.update({
+        updated: firebase.firestore.FieldValue.serverTimestamp()
+      })
+    }catch(e){}
+  }
+})
     // sounds
     function playClick(){ try{ new Audio("https://assets.mixkit.co/active_storage/sfx/232/232.wav").play() }catch(e){} }
     function playAlarm(){ try{ new Audio("https://assets.mixkit.co/active_storage/sfx/2018/2018.wav").play() }catch(e){} }
